@@ -1,4 +1,4 @@
-name: Build EduLive APK
+name: EduLive APK Builder
 
 on:
   workflow_dispatch:
@@ -13,22 +13,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract EduLive ZIP
+      - name: Extract ZIP
         run: |
-          sudo apt-get update
           sudo apt-get install -y unzip
-          ZIP_FILE=$(find . -maxdepth 1 -iname "*.zip" -print -quit)
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ZIP file not found!"
-            exit 1
-          fi
+
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -1)
+
           mkdir extracted
           unzip -q "$ZIP_FILE" -d extracted
-          PROJECT_DIR=$(dirname "$(find extracted -name pubspec.yaml -print -quit)")
-          if [ "$PROJECT_DIR" = "extracted" ] || [ ! -f "$PROJECT_DIR/pubspec.yaml" ]; then
-            echo "Flutter project not found!"
+
+          PUBSPEC=$(find extracted -name pubspec.yaml | head -1)
+
+          if [ -z "$PUBSPEC" ]; then
+            echo "Flutter project not found"
             exit 1
           fi
+
+          PROJECT_DIR=$(dirname "$PUBSPEC")
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
       - name: Setup Java
@@ -42,7 +43,14 @@ jobs:
         with:
           channel: stable
 
-      - name: Install dependencies
+      - name: Regenerate Android Project
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          rm -rf android
+          flutter create --platforms=android .
+          flutter clean
+
+      - name: Install Dependencies
         working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
 
