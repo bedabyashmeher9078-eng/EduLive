@@ -10,22 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Extract ZIP
+      - name: Find and Extract Flutter Project
         run: |
+          sudo apt-get update
           sudo apt-get install -y unzip
 
-          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -1)
+          ZIP_FILE=$(find . -type f -iname "*.zip" | head -1)
 
-          mkdir extracted
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: ZIP file not found!"
+            echo "Checking repository files:"
+            find . -maxdepth 3 -type f
+            exit 1
+          fi
+
+          echo "Found ZIP: $ZIP_FILE"
+
+          mkdir -p extracted
           unzip -q "$ZIP_FILE" -d extracted
 
-          PUBSPEC=$(find extracted -name pubspec.yaml | head -1)
+          PUBSPEC=$(find extracted -name pubspec.yaml -type f | head -1)
 
           if [ -z "$PUBSPEC" ]; then
-            echo "Flutter project not found"
+            echo "ERROR: Flutter project not found!"
             exit 1
           fi
 
